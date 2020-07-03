@@ -7,6 +7,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
@@ -14,6 +15,7 @@ import android.content.res.Configuration;
 import android.hardware.Camera;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
@@ -93,6 +95,38 @@ public class FullscreenActivity extends AppCompatActivity implements RtmpHandler
         }
     }
 
+    private boolean isLive() {
+        if(btnPublish != null)
+            return btnPublish.getText().toString().contentEquals(TEXT_UNPUBLISH);
+        return false;
+    }
+
+    private void showLiveOk() {
+        if(btnLive != null && isLive()) {
+            btnLive.setVisibility(View.VISIBLE);
+            btnLive.setTextColor(getResources().getColor(R.color.limegreen));
+        }
+    }
+
+    private void showLiveWarn() {
+        if(btnLive != null && isLive()) {
+            btnLive.setVisibility(View.VISIBLE);
+            btnLive.setTextColor(getResources().getColor(R.color.darkorange));
+        }
+    }
+
+    private void showLiveError() {
+        if(btnLive != null && isLive()) {
+            btnLive.setVisibility(View.VISIBLE);
+            btnLive.setTextColor(getResources().getColor(R.color.firebrick));
+        }
+    }
+
+    private void hideLive() {
+        if(btnLive != null)
+            btnLive.setVisibility(View.GONE);
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -118,7 +152,7 @@ public class FullscreenActivity extends AppCompatActivity implements RtmpHandler
         btnSwitchCamera = (Button) findViewById(R.id.button_switch);
         mCameraView = (SrsCameraView) findViewById(R.id.camera_view);
 
-        btnLive.setVisibility(View.GONE);
+        hideLive();
 
         mPublisher = new SrsPublisher(mCameraView);
         mPublisher.setEncodeHandler(new SrsEncodeHandler(this));
@@ -130,7 +164,7 @@ public class FullscreenActivity extends AppCompatActivity implements RtmpHandler
         mPublisher.setVideoHDMode();
         mPublisher.startCamera();
 
-        mCameraView.setCameraCallbacksHandler(new SrsCameraView.CameraCallbacksHandler(){
+        mCameraView.setCameraCallbacksHandler(new SrsCameraView.CameraCallbacksHandler() {
             @Override
             public void onCameraParameters(Camera.Parameters params) {
                 // TODO setup camera
@@ -142,7 +176,7 @@ public class FullscreenActivity extends AppCompatActivity implements RtmpHandler
             public void onClick(View v) {
                 if (btnPublish.getText().toString().contentEquals(TEXT_PUBLISH)) {
                     rtmpUrl = editUrl.getText().toString();
-                    if(rtmpUrl.isEmpty()) {
+                    if (rtmpUrl.isEmpty()) {
                         Toast.makeText(getApplicationContext(), "Bad URL!", Toast.LENGTH_SHORT).show();
                         return;
                     }
@@ -159,7 +193,9 @@ public class FullscreenActivity extends AppCompatActivity implements RtmpHandler
                     btnPublish.setText(TEXT_UNPUBLISH);
                     closeScreenOrientation();
                     editUrl.setEnabled(false);
-                    btnLive.setVisibility(View.VISIBLE);
+
+                    showLiveWarn();
+                    delayedHide(AUTO_HIDE_DELAY_MILLIS);
 
                 } else if (btnPublish.getText().toString().contentEquals(TEXT_UNPUBLISH)) {
 
@@ -171,7 +207,8 @@ public class FullscreenActivity extends AppCompatActivity implements RtmpHandler
 
                     btnPublish.setText(TEXT_PUBLISH);
                     editUrl.setEnabled(true);
-                    btnLive.setVisibility(View.GONE);
+
+                    hideLive();
                 }
             }
         });
@@ -192,6 +229,7 @@ public class FullscreenActivity extends AppCompatActivity implements RtmpHandler
             mPublisher.stopPublish();
             mPublisher.stopRecord();
             btnPublish.setText(TEXT_PUBLISH);
+            hideLive();
         } catch (Exception e1) {
             //
         }
@@ -241,6 +279,61 @@ public class FullscreenActivity extends AppCompatActivity implements RtmpHandler
     }
 
 
+    private static final int AUTO_HIDE_DELAY_MILLIS = 3000;
+    private static final int UI_ANIMATION_DELAY = 300;
+    private final Handler mHideHandler = new Handler();
+    private View mContentView;
+
+    private final Runnable mHidePart2Runnable = new Runnable() {
+        @Override
+        public void run() {
+            mControlsView.setVisibility(View.GONE);
+        }
+    };
+
+    private View mControlsView;
+    private final Runnable mShowPart2Runnable = new Runnable() {
+        @Override
+        public void run() {
+            mControlsView.setVisibility(View.VISIBLE);
+        }
+    };
+
+    private boolean mVisible;
+    private final Runnable mHideRunnable = new Runnable() {
+        @Override
+        public void run() {
+            hide();
+        }
+    };
+
+    private void toggle() {
+        if (mVisible) {
+            hide();
+        } else {
+            show();
+        }
+    }
+
+    private void hide() {
+        mVisible = false;
+
+        mHideHandler.removeCallbacks(mShowPart2Runnable);
+        mHideHandler.postDelayed(mHidePart2Runnable, UI_ANIMATION_DELAY);
+    }
+
+    private void show() {
+        mVisible = true;
+
+        mHideHandler.removeCallbacks(mHidePart2Runnable);
+        mHideHandler.postDelayed(mShowPart2Runnable, UI_ANIMATION_DELAY);
+    }
+
+    private void delayedHide(int delayMillis) {
+        mHideHandler.removeCallbacks(mHideRunnable);
+        mHideHandler.postDelayed(mHideRunnable, delayMillis);
+    }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -250,6 +343,16 @@ public class FullscreenActivity extends AppCompatActivity implements RtmpHandler
         keepScreenOn();
 
         setContentView(R.layout.activity_fullscreen);
+
+        mVisible = true;
+        mControlsView = findViewById(R.id.fullscreen_content_controls);
+        mContentView = findViewById(R.id.fullscreen_content);
+        mContentView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                toggle();
+            }
+        });
 
         openScreenOrientation();
         requestPermission();
@@ -265,6 +368,7 @@ public class FullscreenActivity extends AppCompatActivity implements RtmpHandler
     // interface RtmpListener
     @Override
     public void onRtmpConnected(String s) {
+        showLiveOk();
         Toast.makeText(getApplicationContext(), s, Toast.LENGTH_SHORT).show();
     }
 
@@ -287,6 +391,7 @@ public class FullscreenActivity extends AppCompatActivity implements RtmpHandler
     // interface RtmpListener
     @Override
     public void onRtmpDisconnected() {
+        hideLive();
         Toast.makeText(getApplicationContext(), "Disconnected", Toast.LENGTH_SHORT).show();
     }
 
@@ -376,18 +481,18 @@ public class FullscreenActivity extends AppCompatActivity implements RtmpHandler
     }
 
 
-
-
     ////////////////////////////////////////
     // interface SrsEncodeListener
     @Override
     public void onNetworkWeak() {
+        showLiveWarn();
         Toast.makeText(getApplicationContext(), "Network weak", Toast.LENGTH_SHORT).show();
     }
 
     // interface SrsEncodeListener
     @Override
     public void onNetworkResume() {
+        showLiveOk();
         Toast.makeText(getApplicationContext(), "Network resume", Toast.LENGTH_SHORT).show();
     }
 
