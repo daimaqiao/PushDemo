@@ -54,6 +54,14 @@
             android:orientation="vertical"
             tools:ignore="UselessParent">
 
+            <Button
+                android:id="@+id/button_scan"
+                style="?metaButtonBarButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="right"
+                android:text="[Scan QR]" />
+
             <EditText
                 android:id="@+id/edit_rtmp_url"
                 android:layout_width="match_parent"

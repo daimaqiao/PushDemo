@@ -7,7 +7,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
@@ -24,6 +25,8 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import com.github.faucamp.simplertmp.RtmpHandler;
+import com.google.zxing.integration.android.IntentIntegrator;
+import com.google.zxing.integration.android.IntentResult;
 
 import net.ossrs.yasea.SrsCameraView;
 import net.ossrs.yasea.SrsEncodeHandler;
@@ -48,7 +51,9 @@ public class FullscreenActivity extends AppCompatActivity implements RtmpHandler
     private static final String TEXT_PUBLISH = "publish";
     private static final String TEXT_UNPUBLISH = "stop";
 
+    private EditText editUrl;
     private Button btnLive;
+    private Button btnScan;
     private Button btnPublish;
     private Button btnSwitchCamera;
 
@@ -127,6 +132,25 @@ public class FullscreenActivity extends AppCompatActivity implements RtmpHandler
             btnLive.setVisibility(View.GONE);
     }
 
+    private void enableQrScan(boolean enabled) {
+        if(btnScan != null)
+            btnScan.setEnabled(enabled);
+
+        if(editUrl != null)
+            editUrl.setEnabled(enabled);
+    }
+
+    private void updateRtmpUrl(String url) {
+        if(url == null || url.isEmpty())
+            return;
+
+        if(url.toLowerCase().startsWith("rtmp://") && editUrl != null)
+            editUrl.setText(url);
+        else
+            Toast.makeText(this, "Bad URL - " + url, Toast.LENGTH_SHORT).show();
+    }
+
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -144,7 +168,7 @@ public class FullscreenActivity extends AppCompatActivity implements RtmpHandler
         sp = getSharedPreferences(APP_NAME, MODE_PRIVATE);
         rtmpUrl = sp.getString(KEY_URL, rtmpUrl);
 
-        final EditText editUrl = (EditText) findViewById(R.id.edit_rtmp_url);
+        editUrl = (EditText) findViewById(R.id.edit_rtmp_url);
         editUrl.setText(rtmpUrl);
 
         btnLive = (Button) findViewById(R.id.button_live);
@@ -192,9 +216,9 @@ public class FullscreenActivity extends AppCompatActivity implements RtmpHandler
 
                     btnPublish.setText(TEXT_UNPUBLISH);
                     closeScreenOrientation();
-                    editUrl.setEnabled(false);
 
                     showLiveWarn();
+                    enableQrScan(false);
                     delayedHide(AUTO_HIDE_DELAY_MILLIS);
 
                 } else if (btnPublish.getText().toString().contentEquals(TEXT_UNPUBLISH)) {
@@ -206,9 +230,9 @@ public class FullscreenActivity extends AppCompatActivity implements RtmpHandler
                     mPublisher.startCamera();
 
                     btnPublish.setText(TEXT_PUBLISH);
-                    editUrl.setEnabled(true);
 
                     hideLive();
+                    enableQrScan(true);
                 }
             }
         });
@@ -220,6 +244,34 @@ public class FullscreenActivity extends AppCompatActivity implements RtmpHandler
             }
         });
 
+        initQrScan();
+    }
+
+
+    private void initQrScan() {
+        btnScan = (Button) findViewById(R.id.button_scan);
+
+        final Activity that = this;
+        btnScan.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                IntentIntegrator integrator = new IntentIntegrator(that);
+                integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE);
+                integrator.setPrompt("从二维码中读取RTMP URL");
+                integrator.setCameraId(0);
+                integrator.setBeepEnabled(true);
+                integrator.initiateScan();
+            }
+        });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        IntentResult result = IntentIntegrator.parseActivityResult(requestCode, resultCode, data);
+        if (result != null)
+            updateRtmpUrl(result.getContents());
+
+        super.onActivityResult(requestCode, resultCode, data);
     }
 
 
@@ -230,6 +282,8 @@ public class FullscreenActivity extends AppCompatActivity implements RtmpHandler
             mPublisher.stopRecord();
             btnPublish.setText(TEXT_PUBLISH);
             hideLive();
+            enableQrScan(true);
+            mPublisher.startCamera();
         } catch (Exception e1) {
             //
         }
