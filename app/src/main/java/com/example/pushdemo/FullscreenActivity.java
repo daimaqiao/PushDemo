@@ -46,6 +46,7 @@ public class FullscreenActivity extends AppCompatActivity implements RtmpHandler
     private static final String TEXT_PUBLISH = "publish";
     private static final String TEXT_UNPUBLISH = "stop";
 
+    private Button btnLive;
     private Button btnPublish;
     private Button btnSwitchCamera;
 
@@ -112,9 +113,12 @@ public class FullscreenActivity extends AppCompatActivity implements RtmpHandler
         final EditText editUrl = (EditText) findViewById(R.id.edit_rtmp_url);
         editUrl.setText(rtmpUrl);
 
+        btnLive = (Button) findViewById(R.id.button_live);
         btnPublish = (Button) findViewById(R.id.button_publish);
         btnSwitchCamera = (Button) findViewById(R.id.button_switch);
         mCameraView = (SrsCameraView) findViewById(R.id.camera_view);
+
+        btnLive.setVisibility(View.GONE);
 
         mPublisher = new SrsPublisher(mCameraView);
         mPublisher.setEncodeHandler(new SrsEncodeHandler(this));
@@ -155,6 +159,7 @@ public class FullscreenActivity extends AppCompatActivity implements RtmpHandler
                     btnPublish.setText(TEXT_UNPUBLISH);
                     closeScreenOrientation();
                     editUrl.setEnabled(false);
+                    btnLive.setVisibility(View.VISIBLE);
 
                 } else if (btnPublish.getText().toString().contentEquals(TEXT_UNPUBLISH)) {
 
@@ -166,6 +171,7 @@ public class FullscreenActivity extends AppCompatActivity implements RtmpHandler
 
                     btnPublish.setText(TEXT_PUBLISH);
                     editUrl.setEnabled(true);
+                    btnLive.setVisibility(View.GONE);
                 }
             }
         });
