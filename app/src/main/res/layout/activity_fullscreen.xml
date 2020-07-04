@@ -35,12 +35,31 @@
         android:layout_height="match_parent"
         android:fitsSystemWindows="true">
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/text_net"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="NET" />
+
+            <TextView
+                android:id="@+id/text_fps"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="FPS" />
+
+        </LinearLayout>
+
         <Button
-            android:layout_gravity="right"
             android:id="@+id/button_live"
             style="?metaButtonBarButtonStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="right"
             android:text="LIVE"
             android:textSize="30sp"
             android:textStyle="bold" />
@@ -95,8 +114,17 @@
                     android:layout_weight="1"
                     android:text="switch" />
 
+                <Button
+                    android:id="@+id/button_encoder"
+                    style="?metaButtonBarButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="soft encoder" />
+
             </LinearLayout>
         </LinearLayout>
+
     </FrameLayout>
 
 </FrameLayout>
